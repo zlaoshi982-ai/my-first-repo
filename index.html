@@ -2,91 +2,119 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>NESO → NXPC 兑换计算器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neso → NXPC → 人民币 计算器</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f9;
+      color: #333;
       text-align: center;
-      padding: 40px;
-      background: #f0f2f5;
     }
-    h2 {
-      margin-bottom: 20px;
+    h1 {
+      color: #2c3e50;
     }
-    input, button {
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    input, button, select {
+      margin: 10px 0;
       padding: 10px;
-      font-size: 16px;
-      margin: 10px;
-      width: 220px;
+      width: 90%;
       border-radius: 8px;
       border: 1px solid #ccc;
+      font-size: 16px;
     }
     button {
-      background-color: #007bff;
-      color: white;
+      background: #3498db;
+      color: #fff;
       border: none;
       cursor: pointer;
+      font-weight: bold;
     }
     button:hover {
-      background-color: #0056b3;
+      background: #2980b9;
     }
     .result {
-      margin-top: 20px;
+      margin-top: 15px;
       font-size: 18px;
       font-weight: bold;
-      color: #333;
+      color: #27ae60;
     }
   </style>
 </head>
 <body>
-  <h2>🎯 NESO 兑换计算器</h2>
-  <p>兑换规则：100000 NESO = 1 NXPC</p>
+  <div class="container">
+    <h1>Neso 兑换计算器</h1>
+    <p>固定比例：100,000 Neso = 1 NXPC</p>
 
-  <input type="number" id="nesoInput" placeholder="输入 NESO 数量">
-  <br>
-  <button onclick="calculate()">开始计算</button>
+    <input type="number" id="nesoInput" placeholder="输入 Neso 数量">
+    <button onclick="calculate()">计算</button>
 
-  <div class="result" id="nxpcResult">NXPC 数量：-</div>
-  <div class="result" id="cnyResult">人民币金额：-</div>
+    <p>币价来源：<span id="priceInfo">加载中...</span></p>
+    <input type="number" id="manualRate" placeholder="手动输入汇率 (1美元=？人民币)">
+    <button onclick="useManualRate()">使用手动汇率</button>
+
+    <div class="result" id="result"></div>
+  </div>
 
   <script>
-    async function getPrice() {
+    let nxpcPriceUSD = 0;
+    let usdToCny = 7.2; // 默认汇率，可手动改
+
+    // 获取 NXPC 币价
+    async function fetchPrice() {
       try {
-        // 获取 NXPC 对 USDT 的价格（KuCoin）
-        let res = await fetch("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=NXPC-USDT");
-        let data = await res.json();
-        let nxpcPriceUSDT = parseFloat(data.data.price);
-
-        // 获取 USD 对 CNY 汇率
-        let fx = await fetch("https://api.exchangerate.host/convert?from=USD&to=CNY");
-        let fxData = await fx.json();
-        let usdToCny = parseFloat(fxData.result);
-
-        return nxpcPriceUSDT * usdToCny;
+        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=nxpc&vs_currencies=usd");
+        const data = await res.json();
+        if (data.nxpc && data.nxpc.usd) {
+          nxpcPriceUSD = data.nxpc.usd;
+          document.getElementById("priceInfo").innerText = `1 NXPC = ${nxpcPriceUSD} 美元`;
+        } else {
+          document.getElementById("priceInfo").innerText = "获取失败，可能 API 不支持 NXPC";
+          nxpcPriceUSD = 0;
+        }
       } catch (e) {
-        alert("⚠️ 获取价格失败，请稍后再试");
-        return 0;
+        document.getElementById("priceInfo").innerText = "获取币价失败";
+        nxpcPriceUSD = 0;
       }
     }
 
-    async function calculate() {
-      let neso = parseFloat(document.getElementById("nesoInput").value);
+    function calculate() {
+      const neso = parseFloat(document.getElementById("nesoInput").value);
       if (isNaN(neso) || neso <= 0) {
-        alert("请输入正确的 NESO 数量");
+        alert("请输入正确的 Neso 数量");
         return;
       }
 
-      // 计算 NXPC
-      let nxpc = neso / 100000;
-      document.getElementById("nxpcResult").innerText = "NXPC 数量：" + nxpc.toFixed(6);
-
-      // 获取实时价格并计算人民币
-      let priceCNY = await getPrice();
-      if (priceCNY > 0) {
-        let rmb = nxpc * priceCNY;
-        document.getElementById("cnyResult").innerText = "人民币金额：" + rmb.toFixed(2) + " 元";
+      const nxpc = neso / 100000;
+      if (nxpcPriceUSD > 0) {
+        const rmb = nxpc * nxpcPriceUSD * usdToCny;
+        document.getElementById("result").innerText =
+          `${neso.toLocaleString()} Neso = ${nxpc.toFixed(4)} NXPC ≈ ${rmb.toFixed(2)} 人民币`;
+      } else {
+        document.getElementById("result").innerText =
+          `${neso.toLocaleString()} Neso = ${nxpc.toFixed(4)} NXPC (币价未获取)`;
       }
     }
+
+    function useManualRate() {
+      const rate = parseFloat(document.getElementById("manualRate").value);
+      if (!isNaN(rate) && rate > 0) {
+        usdToCny = rate;
+        alert(`已使用手动汇率：1 美元 = ${usdToCny} 人民币`);
+      } else {
+        alert("请输入正确的汇率数值");
+      }
+    }
+
+    fetchPrice();
   </script>
 </body>
 </html>
