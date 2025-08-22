@@ -1,88 +1,39 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>NESO → NXPC → 人民币 计算器</title>
+  <title>NESO → 人民币 计算器</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 480px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f9fafb;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    h2 { text-align: center; }
-    label { display: block; margin-top: 12px; font-weight: bold; }
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-    }
-    button {
-      width: 100%;
-      margin-top: 20px;
-      padding: 12px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover { background: #0056b3; }
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-    }
-    .result p { margin: 6px 0; font-size: 16px; }
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    input { padding: 8px; margin: 5px; width: 200px; }
+    button { padding: 8px 15px; margin: 10px; }
+    h2 { color: #333; }
   </style>
 </head>
 <body>
-  <h2>NESO → NXPC → 人民币 计算器</h2>
-
-  <label for="neso">输入 NESO 数量：</label>
-  <input type="number" id="neso" placeholder="例如：200000">
-
-  <label for="nxpcRate">输入 NXPC/USDT 汇率：</label>
-  <input type="number" id="nxpcRate" step="0.0001" placeholder="例如：0.023">
-
-  <label for="usdtRate">输入 USDT/CNY 汇率：</label>
-  <input type="number" id="usdtRate" step="0.0001" placeholder="例如：7.2">
-
-  <button onclick="calculate()">计算</button>
-
-  <div class="result" id="result">
-    <p>兑换得到 NXPC： - </p>
-    <p>折合人民币： - </p>
-  </div>
-
+  <h2>NESO → 人民币 计算器</h2>
+  <label>NESO 数量: </label><br>
+  <input id="neso" type="number" placeholder="输入 NESO 数量"><br>
+  
+  <label>1 NXPC 人民币价格: </label><br>
+  <input id="rate" type="number" step="0.01" placeholder="输入 NXPC 人民币价格"><br>
+  
+  <button onclick="calc()">计算</button>
+  
+  <h3 id="result">结果: </h3>
+  
   <script>
-    function calculate() {
-      const neso = parseFloat(document.getElementById('neso').value);
-      const nxpcRate = parseFloat(document.getElementById('nxpcRate').value);
-      const usdtRate = parseFloat(document.getElementById('usdtRate').value);
-
-      if (isNaN(neso) || isNaN(nxpcRate) || isNaN(usdtRate)) {
-        alert("请输入完整的数值！");
+    function calc() {
+      let neso = parseFloat(document.getElementById('neso').value);
+      let rate = parseFloat(document.getElementById('rate').value);
+      if (isNaN(neso) || isNaN(rate)) {
+        document.getElementById('result').innerText = "请输入正确的数值";
         return;
       }
-
-      // 固定比例：10万 NESO = 1 NXPC
-      const nxpc = neso / 100000;
-      const cny = nxpc * nxpcRate * usdtRate;
-
-      document.getElementById('result').innerHTML = `
-        <p>兑换得到 NXPC：<b>${nxpc.toFixed(4)}</b></p>
-        <p>折合人民币：<b>¥ ${cny.toFixed(2)}</b></p>
-      `;
+      let nxpc = neso / 100000;  // 固定 10万 NESO = 1 NXPC
+      let rmb = nxpc * rate;
+      document.getElementById('result').innerText = 
+        `结果: ${neso} NESO = ${nxpc.toFixed(4)} NXPC ≈ ¥${rmb.toFixed(2)}`;
     }
   </script>
 </body>
