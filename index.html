@@ -2,38 +2,143 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>NESO → 人民币 计算器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NESO → NXPC → 人民币 计算器</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    input { padding: 8px; margin: 5px; width: 200px; }
-    button { padding: 8px 15px; margin: 10px; }
-    h2 { color: #333; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #444;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+    button {
+      width: 48%;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .calc-btn {
+      background: #4CAF50;
+      color: white;
+    }
+    .copy-btn {
+      background: #2196F3;
+      color: white;
+      float: right;
+    }
+    .result {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    .highlight {
+      font-size: 22px;
+      font-weight: bold;
+      color: #e91e63;
+    }
+    details {
+      margin-top: 15px;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #555;
+    }
+    .history-item {
+      font-size: 14px;
+      margin-top: 5px;
+      border-bottom: 1px dashed #ccc;
+      padding-bottom: 4px;
+    }
   </style>
 </head>
 <body>
-  <h2>NESO → 人民币 计算器</h2>
-  <label>NESO 数量: </label><br>
-  <input id="neso" type="number" placeholder="输入 NESO 数量"><br>
-  
-  <label>1 NXPC 人民币价格: </label><br>
-  <input id="rate" type="number" step="0.01" placeholder="输入 NXPC 人民币价格"><br>
-  
-  <button onclick="calc()">计算</button>
-  
-  <h3 id="result">结果: </h3>
-  
+  <div class="container">
+    <h2>NESO → NXPC → 人民币 计算器</h2>
+
+    <div class="card">
+      <label for="neso">输入 NESO 数量:</label>
+      <input type="number" id="neso" placeholder="例如：1000000">
+
+      <label for="rate">输入汇率 (1 NXPC = ? 人民币):</label>
+      <input type="number" id="rate" step="0.0001" placeholder="例如：2.35">
+
+      <button class="calc-btn" onclick="calculate()">计算</button>
+      <button class="copy-btn" onclick="copyResult()">复制结果</button>
+
+      <div class="result" id="nxpcResult"></div>
+      <div class="result highlight" id="cnyResult"></div>
+    </div>
+
+    <details>
+      <summary>历史记录</summary>
+      <div id="history"></div>
+    </details>
+  </div>
+
   <script>
-    function calc() {
-      let neso = parseFloat(document.getElementById('neso').value);
-      let rate = parseFloat(document.getElementById('rate').value);
+    function calculate() {
+      const neso = parseFloat(document.getElementById('neso').value);
+      const rate = parseFloat(document.getElementById('rate').value);
+
       if (isNaN(neso) || isNaN(rate)) {
-        document.getElementById('result').innerText = "请输入正确的数值";
+        alert("请输入有效的 NESO 数量和汇率");
         return;
       }
-      let nxpc = neso / 100000;  // 固定 10万 NESO = 1 NXPC
-      let rmb = nxpc * rate;
-      document.getElementById('result').innerText = 
-        `结果: ${neso} NESO = ${nxpc.toFixed(4)} NXPC ≈ ¥${rmb.toFixed(2)}`;
+
+      const nxpc = neso / 100000; // 固定 10万 NESO = 1 NXPC
+      const cny = nxpc * rate;
+
+      document.getElementById('nxpcResult').innerText = "NXPC 数量: " + nxpc.toFixed(4);
+      document.getElementById('cnyResult').innerText = "折合人民币: " + cny.toFixed(2) + " 元";
+
+      // 保存历史记录
+      const historyDiv = document.getElementById("history");
+      const item = document.createElement("div");
+      item.className = "history-item";
+      item.innerText = `${neso} NESO = ${nxpc.toFixed(4)} NXPC ≈ ${cny.toFixed(2)} 元`;
+      historyDiv.prepend(item);
+    }
+
+    function copyResult() {
+      const nxpcText = document.getElementById('nxpcResult').innerText;
+      const cnyText = document.getElementById('cnyResult').innerText;
+      const fullText = nxpcText + "\n" + cnyText;
+
+      navigator.clipboard.writeText(fullText).then(() => {
+        alert("结果已复制！");
+      });
     }
   </script>
 </body>
