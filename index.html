@@ -1,161 +1,92 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NESO → NXPC → 人民币 计算器</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-       margin:0;background:#f5f6f8;color:#222}
-  .wrap{max-width:760px;margin:24px auto;padding:16px}
-  h1{font-size:26px;margin:8px 0 16px}
-  .card{background:#fff;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.06);
-        padding:16px;margin:12px 0}
-  label{display:block;margin:.4rem 0 .2rem;font-weight:600}
-  input{width:100%;padding:12px 14px;border:1px solid #d7dbe2;border-radius:10px;
-        font-size:16px;outline:none}
-  input:focus{border-color:#7aa2ff;box-shadow:0 0 0 3px rgba(122,162,255,.2)}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .muted{color:#666;font-size:13px}
-  .big{font-size:22px;font-weight:800;margin:8px 0}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  .ok{color:#0a7a36}
-  .warn{color:#b45309}
-  .err{color:#b91c1c}
-  .btn{padding:10px 14px;border-radius:10px;border:0;background:#1f6feb;color:#fff;font-weight:700;cursor:pointer}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
-  .footer{margin-top:18px;color:#777;font-size:12px}
-</style>
+  <meta charset="UTF-8">
+  <title>NESO → NXPC 兑换计算器</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+      background: #f0f2f5;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px;
+      width: 220px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>NESO → NXPC → 人民币 计算器</h1>
+  <h2>🎯 NESO 兑换计算器</h2>
+  <p>兑换规则：100000 NESO = 1 NXPC</p>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <label>输入 NESO 数量</label>
-        <input id="neso" type="number" min="0" step="1" placeholder="例如 250000" />
-      </div>
-      <div>
-        <label>NXPC/USDT 价格（手动填写）</label>
-        <input id="pxNxpc" type="number" min="0" step="0.00000001" placeholder="例如 0.023" />
-      </div>
-    </div>
-    <div style="margin-top:10px" class="row">
-      <div>
-        <label>USDT/CNY 汇率（自动获取，可改）</label>
-        <input id="pxCny" type="number" min="0" step="0.0001" />
-        <div id="rateInfo" class="muted">正在获取 USDT→CNY …</div>
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:8px;justify-content:flex-end">
-        <button id="calc" class="btn">计算</button>
-        <button id="save" class="btn" style="background:#0a7a36">保存价格</button>
-      </div>
-    </div>
-  </div>
+  <input type="number" id="nesoInput" placeholder="输入 NESO 数量">
+  <br>
+  <button onclick="calculate()">开始计算</button>
 
-  <div class="card">
-    <div class="muted mono">固定比例：100,000 NESO = 1 NXPC</div>
-    <div class="big" id="resultNxpc">≈ 0.000000 NXPC</div>
-    <div class="big" id="resultUsd">≈ 0.000000 USDT</div>
-    <div class="big" id="resultCny">≈ 0.00 人民币</div>
-  </div>
+  <div class="result" id="nxpcResult">NXPC 数量：-</div>
+  <div class="result" id="cnyResult">人民币金额：-</div>
 
-  <div class="card">
-    <div class="muted">明细</div>
-    <div id="detail" class="mono"></div>
-  </div>
+  <script>
+    async function getPrice() {
+      try {
+        // 获取 NXPC 对 USDT 的价格（KuCoin）
+        let res = await fetch("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=NXPC-USDT");
+        let data = await res.json();
+        let nxpcPriceUSDT = parseFloat(data.data.price);
 
-  <div class="footer">
-    小贴士：第一次用先手动填一个 <b>NXPC/USDT</b> 价格并点“保存价格”。USDT→CNY 汇率每天会自动更新一次。
-  </div>
-</div>
+        // 获取 USD 对 CNY 汇率
+        let fx = await fetch("https://api.exchangerate.host/convert?from=USD&to=CNY");
+        let fxData = await fx.json();
+        let usdToCny = parseFloat(fxData.result);
 
-<script>
-const NESO_PER_NXPC = 100000;            // 100,000 NESO = 1 NXPC
-const geckoRateKey   = 'usdt_cny_rate_v1';
-const priceNxpcKey   = 'nxpc_usdt_price_v1';
-const rateInfo       = document.getElementById('rateInfo');
-const iNeso          = document.getElementById('neso');
-const iPxNxpc        = document.getElementById('pxNxpc');
-const iPxCny         = document.getElementById('pxCny');
-const btnCalc        = document.getElementById('calc');
-const btnSave        = document.getElementById('save');
-
-const outNxpc        = document.getElementById('resultNxpc');
-const outUsd         = document.getElementById('resultUsd');
-const outCny         = document.getElementById('resultCny');
-const outDetail      = document.getElementById('detail');
-
-// 载入本地价格与汇率
-(function initLocal(){
-  const savedPx = localStorage.getItem(priceNxpcKey);
-  if(savedPx){ iPxNxpc.value = savedPx; }
-  const savedRate = localStorage.getItem(geckoRateKey);
-  if(savedRate){
-    const {rate, ts} = JSON.parse(savedRate);
-    iPxCny.value = rate;
-    rateInfo.textContent = `USDT/CNY 来自缓存（${new Date(ts).toLocaleString()}）`;
-  }
-})();
-
-// 获取 USDT→CNY（用 CoinGecko 的 tether）
-(async function fetchRate(){
-  try{
-    rateInfo.textContent = '正在从 CoinGecko 获取 USDT/CNY …';
-    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cny', {cache: 'no-store'});
-    const j = await r.json();
-    const rate = j?.tether?.cny;
-    if(typeof rate === 'number' && rate > 0){
-      iPxCny.value = rate.toFixed(4);
-      rateInfo.innerHTML = `USDT/CNY 最新：<b>${rate.toFixed(4)}</b>`;
-      localStorage.setItem(geckoRateKey, JSON.stringify({rate, ts: Date.now()}));
-    }else{
-      rateInfo.innerHTML = '<span class="warn">获取失败，使用本地值或手动输入</span>';
+        return nxpcPriceUSDT * usdToCny;
+      } catch (e) {
+        alert("⚠️ 获取价格失败，请稍后再试");
+        return 0;
+      }
     }
-  }catch(e){
-    rateInfo.innerHTML = '<span class="err">网络异常，使用本地值或手动输入</span>';
-  }
-})();
 
-// 保存价格
-btnSave.addEventListener('click', ()=>{
-  const v = parseFloat(iPxNxpc.value);
-  if(!isFinite(v) || v<=0){ alert('请填写有效的 NXPC/USDT 价格'); return; }
-  localStorage.setItem(priceNxpcKey, v.toString());
-  alert('已保存 NXPC 单价');
-});
+    async function calculate() {
+      let neso = parseFloat(document.getElementById("nesoInput").value);
+      if (isNaN(neso) || neso <= 0) {
+        alert("请输入正确的 NESO 数量");
+        return;
+      }
 
-// 核心计算
-function calc(){
-  const neso = parseFloat(iNeso.value);
-  const pxNxpc = parseFloat(iPxNxpc.value);
-  const pxCny  = parseFloat(iPxCny.value);
+      // 计算 NXPC
+      let nxpc = neso / 100000;
+      document.getElementById("nxpcResult").innerText = "NXPC 数量：" + nxpc.toFixed(6);
 
-  if(!isFinite(neso) || neso<0){ return; }
-  if(!isFinite(pxNxpc) || pxNxpc<=0){ outCny.textContent='请先填写 NXPC 价格'; return; }
-  if(!isFinite(pxCny) || pxCny<=0){ outCny.textContent='请填写 USDT/CNY 汇率'; return; }
-
-  const nxpc = neso / NESO_PER_NXPC;
-  const usdt = nxpc * pxNxpc;
-  const cny  = usdt * pxCny;
-
-  outNxpc.textContent = `≈ ${nxpc.toFixed(6)} NXPC`;
-  outUsd.textContent  = `≈ ${usdt.toFixed(6)} USDT`;
-  outCny.textContent  = `≈ ${cny.toFixed(2)} 人民币`;
-
-  outDetail.innerHTML = [
-    `NESO 数量：${neso.toLocaleString()} `,
-    `兑换比例：1 NXPC = ${NESO_PER_NXPC.toLocaleString()} NESO`,
-    `NXPC 单价：${pxNxpc} USDT`,
-    `USDT/CNY：${pxCny}`,
-  ].join('<br/>');
-}
-
-btnCalc.addEventListener('click', calc);
-// 即输即算
-[iNeso, iPxNxpc, iPxCny].forEach(el=>el.addEventListener('input', calc));
-</script>
+      // 获取实时价格并计算人民币
+      let priceCNY = await getPrice();
+      if (priceCNY > 0) {
+        let rmb = nxpc * priceCNY;
+        document.getElementById("cnyResult").innerText = "人民币金额：" + rmb.toFixed(2) + " 元";
+      }
+    }
+  </script>
 </body>
 </html>
