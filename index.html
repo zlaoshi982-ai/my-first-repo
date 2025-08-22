@@ -1,127 +1,68 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NESO → NXPC → 人民币 计算器</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7fb;margin:0;padding:20px;color:#222}
-  .wrap{max-width:720px;margin:0 auto}
-  h1{font-size:22px;margin:0 0 12px}
-  .card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.06);padding:16px;margin:12px 0}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  input,button,select{height:40px;border-radius:10px;border:1px solid #ddd;padding:0 12px;font-size:16px}
-  button{background:#1a73e8;color:#fff;border:none;cursor:pointer}
-  button:disabled{opacity:.6;cursor:not-allowed}
-  .muted{color:#666;font-size:12px}
-  .result{font-weight:700;font-size:18px;margin-top:10px}
-  .flex{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .kpi .item{background:#f7f9ff;border:1px solid #e6ecff;border-radius:10px;padding:10px}
-  .item b{display:block}
-  .history p{margin:.4em 0}
-  .ok{color:#0a7c2f} .warn{color:#b55900}
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NESO → NXPC → 人民币 计算器</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:20px;background:#f0f2f5;text-align:center}
+    h1{margin-bottom:20px}
+    input,button{padding:8px;font-size:16px;margin:5px;width:200px}
+    .info{margin:10px}
+    .history{margin-top:20px;text-align:left;max-height:200px;overflow-y:auto}
+    .record{margin-bottom:5px;font-size:14px;color:#333}
+  </style>
 </head>
 <body>
-<div class="wrap">
   <h1>NESO → NXPC → 人民币 计算器</h1>
-
-  <div class="card">
-    <div class="row">
-      <input id="neso" type="number" inputmode="decimal" placeholder="输入 NESO 数量" style="flex:1;min-width:200px" />
-      <button id="btnCalc">计算</button>
-    </div>
-    <div id="res" class="result"></div>
-    <div class="muted">固定比率：1 NXPC = 100,000 NESO（官方 Swap&Warp 规则）。</div>
+  <div>
+    <input id="neso" type="number" placeholder="输入 NESO 数量" />
+    <br/>
+    <button onclick="calc()">计算</button>
   </div>
-
-  <div class="card">
-    <div class="flex">
-      <div>自动刷新：</div>
-      <select id="interval">
-        <option value="0">关闭</option>
-        <option value="30000">30 秒</option>
-        <option value="60000" selected>60 秒</option>
-        <option value="120000">120 秒</option>
-      </select>
-      <div>预警（NXPC 价格 USDT ≤）：</div>
-      <input id="alert" type="number" step="0.0001" placeholder="例如 0.75" style="width:120px" />
-    </div>
-    <div class="kpi" style="margin-top:10px">
-      <div class="item"><b>NXPC 价格（USDT）</b><span id="px">--</span></div>
-      <div class="item"><b>USDT→CNY</b><span id="u2c">--</span></div>
-      <div class="item"><b>上次更新时间</b><span id="ts">--</span></div>
-    </div>
-    <div class="muted" style="margin-top:6px">
-      价格源：CoinGecko（NXPC/nexpace、USDT/tether）。若接口受限会回退到上次成功值。
-    </div>
+  <div class="info" id="result">请输入 NESO 数量</div>
+  <div class="info">
+    NXPC/USDT: <span id="px">-</span> USDT，USDT/CNY: <span id="u2c">-</span> CNY
   </div>
-
-  <div class="card">
-    <b>历史记录（本地，仅存最近 20 条）</b>
-    <div id="hist" class="history"></div>
-  </div>
-
-</div>
+  <div class="history" id="history"></div>
 
 <script>
-  // === 常量 ===
-  const NESO_PER_NXPC = 100000; // 官方固定：1 NXPC = 100,000 NESO
-  const CG_SIMPLE = "https://api.coingecko.com/api/v3/simple/price";
-
-  // DOM
-  const el = {
-    neso: document.getElementById('neso'),
-    btn: document.getElementById('btnCalc'),
-    res: document.getElementById('res'),
-    px: document.getElementById('px'),
-    u2c: document.getElementById('u2c'),
-    ts: document.getElementById('ts'),
-    hist: document.getElementById('hist'),
-    interval: document.getElementById('interval'),
-    alert: document.getElementById('alert'),
-  };
-
-  // 状态
-  let state = {
-    nxpcUsdt: null,
-    usdtCny: null,
-    timer: null,
-  };
-
-  // 读取本地配置
-  (function loadLocal(){
-    const a = localStorage.getItem('nxpc_alert');
-    if (a) el.alert.value = a;
-    const iv = localStorage.getItem('nxpc_iv');
-    if (iv) el.interval.value = iv;
-    renderHistory();
-  })();
-
-  // 保存本地配置
-  function saveCfg(){
-    localStorage.setItem('nxpc_alert', el.alert.value || '');
-    localStorage.setItem('nxpc_iv', el.interval.value || '0');
-  }
-
-  // 拉取价格（CoinGecko，无需密钥）
-  async function fetchPrices(){
-    try{
-      const [nxpcRes, tetherRes] = await Promise.all([
-        fetch(`${CG_SIMPLE}?ids=nexpace&vs_currencies=usdt`, {cache:'no-store'}),
-        fetch(`${CG_SIMPLE}?ids=tether&vs_currencies=cny`, {cache:'no-store'}),
+  const NESO_PER_NXPC = 100000;
+  async function fetchRates(){
+    try {
+      const [nxpcRes, usdtRes] = await Promise.all([
+        fetch("https://api.coingecko.com/api/v3/simple/price?ids=nexpace&vs_currencies=usdt"),
+        fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cny")
       ]);
       const nxpc = await nxpcRes.json();
-      const tether = await tetherRes.json();
-      state.nxpcUsdt = nxpc?.nexpace?.usdt ?? state.nxpcUsdt;
-      state.usdtCny = tether?.tether?.cny ?? state.usdtCny;
+      const usdt = await usdtRes.json();
+      window.nxpcUsdt = nxpc.nexpace.usdt;
+      window.usdtCny = usdt.tether.cny;
+      document.getElementById("px").innerText = window.nxpcUsdt;
+      document.getElementById("u2c").innerText = window.usdtCny;
+    } catch(e) {
+      console.warn("获取价格失败", e);
+    }
+  }
 
-      if (state.nxpcUsdt) el.px.textContent = state.nxpcUsdt.toString();
-      if (state.usdtCny) el.u2c.textContent = state.usdtCny.toString();
-      el.ts.textContent = new Date().toLocaleString();
+  function calc(){
+    const neso = parseFloat(document.getElementById("neso").value);
+    if (!neso || neso <= 0) return alert("请输入正确NESO数量！");
+    const nxpc = neso / NESO_PER_NXPC;
+    const usdt = (window.nxpcUsdt || 0) * nxpc;
+    const cny = usdt * (window.usdtCny || 0);
 
-      // 预警
-      const thr = parseFloat(el.alert.value);
-      if (!isNaN(thr) && state.nxpcUsdt !== null && state.nxpcUsdt <= thr){
-        el.px
+    document.getElementById("result").innerText =
+      `≈ ${nxpc.toFixed(6)} NXPC ≈ ${usdt.toFixed(4)} USDT ≈ ${cny.toFixed(2)} CNY`;
+
+    const now = new Date().toLocaleTimeString();
+    const record = document.createElement("div");
+    record.className = "record";
+    record.innerText = `[${now}] ${neso} NESO → ${cny.toFixed(2)} 元`;
+    document.getElementById("history").prepend(record);
+  }
+
+  fetchRates();
+</script>
+</body>
+</html>
