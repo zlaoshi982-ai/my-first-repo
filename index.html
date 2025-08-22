@@ -1,252 +1,89 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NESO → NXPC → 人民币 计算器</title>
-<style>
-  :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--blue:#2563eb;--green:#16a34a;--red:#ef4444}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);
-    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif}
-  .wrap{max-width:920px;margin:24px auto;padding:0 16px}
-  h1{font-size:22px;margin:0 0 6px} .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.05);margin-bottom:16px}
-  label{font-weight:600;display:block;margin:10px 0 6px}
-  input[type=number],select,button{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:#fff}
-  input:focus,select:focus{outline:none;border-color:var(--blue)}
-  .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  @media (max-width:640px){.row{grid-template-columns:1fr}}
-  .btn{cursor:pointer;font-weight:700} .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-  .btn.ghost{background:#fff}
-  .muted{color:var(--muted);font-size:12px}
-  .result{border:1px dashed var(--line);border-radius:12px;background:#fafbfc;padding:12px;margin-top:10px}
-  .kpi{font-size:20px;font-weight:800;color:var(--green)}
-  .mono{font-variant-numeric:tabular-nums}
-  .err{color:var(--red);font-weight:700}
-  .grid-3{display:grid;gap:16px;grid-template-columns:1fr 1fr 1fr}
-  @media (max-width:920px){.grid-3{grid-template-columns:1fr}}
-  .radio-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-  .radio-row label{font-weight:500;margin:0;display:flex;align-items:center;gap:6px}
-</style>
+  <meta charset="UTF-8">
+  <title>NESO → NXPC → 人民币 计算器</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; }
+    label { display: block; margin-top: 12px; font-weight: bold; }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background: #0056b3; }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .result p { margin: 6px 0; font-size: 16px; }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>NESO → NXPC → 人民币 计算器</h1>
-  <div class="sub">固定规则：<b>100,000 NESO = 1 NXPC</b> · 可选自动获取（币安/欧易）或手动输入 NXPC/USDT · USDT→CNY 手动可设</div>
+  <h2>NESO → NXPC → 人民币 计算器</h2>
 
-  <!-- 输入与设置 -->
-  <div class="card">
-    <label for="neso">🔹 输入 NESO 数量</label>
-    <input id="neso" type="number" inputmode="numeric" placeholder="例如：1000000（回车可计算）">
+  <label for="neso">输入 NESO 数量：</label>
+  <input type="number" id="neso" placeholder="例如：200000">
 
-    <div class="radio-row" style="margin:10px 0 6px">
-      <label><input type="radio" name="mode" value="auto" checked> 自动获取 NXPC/USDT</label>
-      <label><input type="radio" name="mode" value="manual"> 手动输入 NXPC/USDT</label>
-    </div>
+  <label for="nxpcRate">输入 NXPC/USDT 汇率：</label>
+  <input type="number" id="nxpcRate" step="0.0001" placeholder="例如：0.023">
 
-    <div id="autoBox" class="row">
-      <div>
-        <label for="exchange">交易所（自动）</label>
-        <select id="exchange">
-          <option value="binance">币安 (Binance)</option>
-          <option value="okx">欧易 (OKX)</option>
-        </select>
-      </div>
-      <div>
-        <label>状态</label>
-        <input id="autoStatus" disabled placeholder="未获取">
-      </div>
-    </div>
+  <label for="usdtRate">输入 USDT/CNY 汇率：</label>
+  <input type="number" id="usdtRate" step="0.0001" placeholder="例如：7.2">
 
-    <div id="manualBox" class="row" style="display:none">
-      <div>
-        <label for="nxpcUsdt">手动：NXPC/USDT 价格</label>
-        <input id="nxpcUsdt" type="number" step="0.0000001" placeholder="例如：0.7352">
-      </div>
-      <div>
-        <label class="muted" style="margin-top:34px">仅手动模式使用</label>
-      </div>
-    </div>
+  <button onclick="calculate()">计算</button>
 
-    <div class="row">
-      <div>
-        <label for="usdtCny">USDT → CNY 汇率（手动）</label>
-        <input id="usdtCny" type="number" step="0.0001" placeholder="例如：7.18（将自动记住）">
-      </div>
-      <div>
-        <label class="muted" style="margin-top:34px">说明：USDT≈USD，建议按银行/平台行情更新</label>
-      </div>
-    </div>
-
-    <div class="row">
-      <button id="btnCalc" class="btn primary">计算 / 刷新</button>
-      <button id="btnClear" class="btn ghost">清空</button>
-    </div>
-    <div id="err" class="err" style="display:none"></div>
-    <div class="muted">提示：按 Enter/回车 也可触发计算；设置会保存在本地。</div>
+  <div class="result" id="result">
+    <p>兑换得到 NXPC： - </p>
+    <p>折合人民币： - </p>
   </div>
 
-  <!-- 结果三步卡片 -->
-  <div class="grid-3">
-    <div class="card">
-      <h3>① NESO → NXPC</h3>
-      <div class="result mono" id="step1">
-        NESO：—<br> 比率：100,000 NESO = 1 NXPC<br>
-        NXPC：—
-      </div>
-    </div>
+  <script>
+    function calculate() {
+      const neso = parseFloat(document.getElementById('neso').value);
+      const nxpcRate = parseFloat(document.getElementById('nxpcRate').value);
+      const usdtRate = parseFloat(document.getElementById('usdtRate').value);
 
-    <div class="card">
-      <h3>② NXPC → USDT</h3>
-      <div class="muted" id="src">来源：—</div>
-      <div class="result mono" id="step2">
-        NXPC：— × 价格：— USDT/NXPC<br>
-        USDT：—
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>③ USDT → 人民币</h3>
-      <div class="muted">USDT/CNY：<span id="fxShow">—</span> · 更新时间：<span id="tss">—</span></div>
-      <div class="result mono" id="step3">
-        USDT：— × 汇率：— CNY/USDT<br>
-        <div class="kpi">总金额：<span id="rmb">—</span> RMB</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-  // 常量
-  const RATIO = 100000; // 100,000 NESO = 1 NXPC
-
-  // DOM
-  const $ = s => document.querySelector(s);
-  const nesoEl = $('#neso');
-  const modeEls = document.getElementsByName('mode');
-  const autoBox = $('#autoBox'), manualBox = $('#manualBox');
-  const exSel = $('#exchange'), autoStatus = $('#autoStatus');
-  const nxpcUsdtEl = $('#nxpcUsdt');
-  const usdtCnyEl = $('#usdtCny');
-  const btnCalc = $('#btnCalc'), btnClear = $('#btnClear');
-  const errEl = $('#err');
-
-  const step1 = $('#step1'), step2 = $('#step2'), step3 = $('#step3');
-  const srcEl = $('#src'), fxShow = $('#fxShow'), tss = $('#tss'), rmbEl = $('#rmb');
-
-  // 本地记忆
-  (function loadSaved(){
-    const s = k => localStorage.getItem(k);
-    if (s('nxpc_mode')) setMode(s('nxpc_mode'));
-    if (s('nxpc_ex')) exSel.value = s('nxpc_ex');
-    if (s('nxpc_pair')) nxpcUsdtEl.value = s('nxpc_pair');
-    if (s('nxpc_fx')) usdtCnyEl.value = s('nxpc_fx');
-  })();
-
-  function saveSettings(){
-    localStorage.setItem('nxpc_mode', getMode());
-    localStorage.setItem('nxpc_ex', exSel.value);
-    localStorage.setItem('nxpc_pair', nxpcUsdtEl.value || '');
-    localStorage.setItem('nxpc_fx', usdtCnyEl.value || '');
-  }
-
-  // 模式切换
-  function getMode(){ return [...modeEls].find(x=>x.checked).value }
-  function setMode(v){
-    [...modeEls].forEach(x=>x.checked = (x.value===v));
-    autoBox.style.display = v==='auto' ? '' : 'none';
-    manualBox.style.display = v==='manual' ? '' : 'none';
-  }
-  [...modeEls].forEach(x=>x.addEventListener('change', ()=>setMode(getMode())));
-  [exSel, nxpcUsdtEl, usdtCnyEl].forEach(el=>el.addEventListener('input', saveSettings));
-
-  // 回车触发计算
-  document.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); calculate(); } });
-
-  // 主流程
-  btnCalc.addEventListener('click', calculate);
-  btnClear.addEventListener('click', clearAll);
-
-  async function calculate(){
-    hideErr();
-    const neso = Number(nesoEl.value);
-    if (!(neso>0)){ return showErr('请输入有效的 NESO 数量'); }
-
-    // Step 1: NESO -> NXPC
-    const nxpc = neso / RATIO;
-    step1.innerHTML = `
-      NESO：${fmt(neso)}<br>
-      比率：100,000 NESO = 1 NXPC<br>
-      NXPC：<b>${fmt(nxpc,6)}</b>
-    `;
-
-    // Step 2: NXPC -> USDT
-    let pair = null, sourceText = '—';
-    const mode = getMode();
-    if (mode==='auto'){
-      autoStatus.value = '获取中…';
-      try{
-        pair = await fetchPair(exSel.value);
-        if (!Number.isFinite(pair)) throw new Error('价差异常');
-        sourceText = `自动 · ${exSel.value==='binance'?'币安 Binance':'欧易 OKX'} · 1 NXPC = ${fmt(pair,6)} USDT`;
-        autoStatus.value = `成功：${fmt(pair,6)} USDT`;
-      }catch(e){
-        autoStatus.value = '失败，请切换交易所或改用手动';
-        return showErr('自动获取价格失败，可切换交易所或改用手动模式');
+      if (isNaN(neso) || isNaN(nxpcRate) || isNaN(usdtRate)) {
+        alert("请输入完整的数值！");
+        return;
       }
-    }else{
-      pair = Number(nxpcUsdtEl.value);
-      if (!(pair>0)) return showErr('请输入手动 NXPC/USDT 价格');
-      sourceText = `手动 · 1 NXPC = ${fmt(pair,6)} USDT`;
+
+      // 固定比例：10万 NESO = 1 NXPC
+      const nxpc = neso / 100000;
+      const cny = nxpc * nxpcRate * usdtRate;
+
+      document.getElementById('result').innerHTML = `
+        <p>兑换得到 NXPC：<b>${nxpc.toFixed(4)}</b></p>
+        <p>折合人民币：<b>¥ ${cny.toFixed(2)}</b></p>
+      `;
     }
-    const usdt = nxpc * pair;
-    srcEl.textContent = '来源：' + sourceText;
-    step2.innerHTML = `
-      NXPC：${fmt(nxpc,6)} × 价格：${fmt(pair,6)} USDT/NXPC<br>
-      USDT：<b>${fmt(usdt,6)}</b>
-    `;
-
-    // Step 3: USDT -> CNY（手动）
-    const fx = Number(usdtCnyEl.value);
-    if (!(fx>0)) return showErr('请填写 USDT→CNY 汇率（手动）');
-    const cny = usdt * fx;
-    fxShow.textContent = fmt(fx,4);
-    tss.textContent = new Date().toLocaleString();
-    step3.innerHTML = `
-      USDT：${fmt(usdt,6)} × 汇率：${fmt(fx,4)} CNY/USDT<br>
-      <div class="kpi">总金额：<span>${fmt(cny,2)}</span> RMB</div>
-    `;
-
-    // 保存设置
-    saveSettings();
-  }
-
-  function clearAll(){
-    nesoEl.value='';
-    // 保留手动汇率与手动价，清空状态与结果
-    autoStatus.value='未获取';
-    srcEl.textContent='来源：—'; fxShow.textContent='—'; tss.textContent='—'; rmbEl.textContent='—';
-    step1.innerHTML='NESO：—<br> 比率：100,000 NESO = 1 NXPC<br> NXPC：—';
-    step2.innerHTML='NXPC：— × 价格：— USDT/NXPC<br> USDT：—';
-    step3.innerHTML='USDT：— × 汇率：— CNY/USDT<br><div class="kpi">总金额：<span>—</span> RMB</div>';
-    hideErr();
-  }
-
-  function showErr(msg){ errEl.style.display='block'; errEl.textContent=msg; }
-  function hideErr(){ errEl.style.display='none'; errEl.textContent=''; }
-
-  async function fetchPair(ex){
-    if (ex==='binance'){
-      const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=NXPCUSDT',{cache:'no-store'});
-      const j = await r.json(); return Number(j.price);
-    }else{
-      const r = await fetch('https://www.okx.com/api/v5/market/ticker?instId=NXPC-USDT',{cache:'no-store'});
-      const j = await r.json(); return Number(j?.data?.[0]?.last);
-    }
-  }
-
-  // 工具
-  const fmt = (n, d=null) => Number.isFinite(n) ? (d==null ? n.toLocaleString('zh-CN') : Number(n).toFixed(d)) : '—';
-</script>
+  </script>
 </body>
 </html>
