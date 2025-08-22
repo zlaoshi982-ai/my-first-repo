@@ -1,120 +1,215 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Neso → NXPC → 人民币 计算器</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f4f6f9;
-      color: #333;
-      text-align: center;
-    }
-    h1 {
-      color: #2c3e50;
-    }
-    .container {
-      max-width: 400px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    input, button, select {
-      margin: 10px 0;
-      padding: 10px;
-      width: 90%;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      background: #3498db;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #2980b9;
-    }
-    .result {
-      margin-top: 15px;
-      font-size: 18px;
-      font-weight: bold;
-      color: #27ae60;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NESO → NXPC → 人民币 计算器（手动汇率）</title>
+<style>
+  :root{
+    --bg:#f5f6fa;--card:#ffffff;--text:#2c3e50;--muted:#667085;
+    --blue:#1e88e5;--green:#2ecc71;--red:#e74c3c;--line:#e6e8ec;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    display:flex; justify-content:center; align-items:flex-start; min-height:100vh;
+  }
+  .wrap{width:100%; max-width:520px; padding:20px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 6px 18px rgba(0,0,0,.06); padding:22px;
+  }
+  h1{font-size:20px; margin:0 0 6px}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
+  label{display:block; font-weight:600; margin:14px 0 6px}
+  input[type="number"], input[type="text"]{
+    width:100%; padding:12px 12px; border:1px solid var(--line); border-radius:10px; outline:none;
+    background:#fff; color:var(--text); font-size:16px;
+  }
+  input:focus{border-color:var(--blue)}
+  .row{display:flex; gap:10px}
+  .row .col{flex:1}
+  .help{font-size:12px; color:var(--muted); margin-top:6px}
+  .err{color:var(--red); font-size:12px; margin-top:6px; display:none}
+  .btn{
+    width:100%; padding:12px; border:1px solid var(--line); background:#fff; border-radius:10px;
+    cursor:pointer; font-weight:600;
+  }
+  .btn.primary{background:var(--blue); color:#fff; border-color:var(--blue)}
+  .btn.ghost{background:#fff}
+  .btn:active{transform:translateY(1px)}
+  .actions{display:flex; gap:10px; margin-top:12px}
+  .result{
+    margin-top:18px; padding:16px; border:1px dashed var(--line); border-radius:12px; background:#fafbfc;
+    animation:fade .25s ease;
+  }
+  .line{margin:6px 0}
+  .nxpc{color:var(--blue); font-weight:700}
+  .rmb{color:var(--green); font-weight:700}
+  .mono{font-variant-numeric:tabular-nums}
+  .foot{margin-top:10px; font-size:12px; color:var(--muted); text-align:center}
+  .switch{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; color:var(--muted)}
+  .switch input{width:18px; height:18px}
+  details{
+    margin-top:12px; border-top:1px solid var(--line); padding-top:12px
+  }
+  details summary{cursor:pointer; color:var(--muted)}
+  @keyframes fade{from{opacity:.2; transform:translateY(4px)} to{opacity:1; transform:none}}
+  @media (max-width:420px){ .row{flex-direction:column} }
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:#111; color:#fff; padding:8px 12px; border-radius:8px; font-size:12px; opacity:0; pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .toast.show{opacity:.95}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Neso 兑换计算器</h1>
-    <p>固定比例：100,000 Neso = 1 NXPC</p>
+<div class="wrap">
+  <div class="card">
+    <h1>NESO 兑换计算器</h1>
+    <div class="sub">固定规则：<b>100,000 NESO = 1 NXPC</b> · 只用手动汇率，离线可用</div>
 
-    <input type="number" id="nesoInput" placeholder="输入 Neso 数量">
-    <button onclick="calculate()">计算</button>
+    <label for="neso">🔹 输入 NESO 数量</label>
+    <input id="neso" type="number" inputmode="numeric" placeholder="例如 1000000（支持回车计算）">
+    <div id="eNeso" class="err">请输入 &gt; 0 的 NESO 数量</div>
 
-    <p>币价来源：<span id="priceInfo">加载中...</span></p>
-    <input type="number" id="manualRate" placeholder="手动输入汇率 (1美元=？人民币)">
-    <button onclick="useManualRate()">使用手动汇率</button>
+    <div class="row">
+      <div class="col">
+        <label for="rate">🪙 1 NXPC = ? RMB（手动汇率）</label>
+        <input id="rate" type="number" step="0.0001" placeholder="例如 5.65（自动记忆）">
+        <div id="eRate" class="err">请输入 &gt; 0 的汇率</div>
+        <div class="help">上次使用会自动记住（本地存储）</div>
+      </div>
+      <div class="col">
+        <label for="ratio">比例（可选）</label>
+        <input id="ratio" type="number" step="1" placeholder="默认 100000">
+        <div class="help">未来规则若变，可自定义 NESO/每 NXPC</div>
+      </div>
+    </div>
 
-    <div class="result" id="result"></div>
+    <div class="switch">
+      <input id="live" type="checkbox">
+      <label for="live">实时计算（输入时自动更新）</label>
+    </div>
+
+    <div class="actions">
+      <button id="btnCalc" class="btn primary">计算</button>
+      <button id="btnClear" class="btn ghost">清除</button>
+      <button id="btnCopy" class="btn ghost">复制结果</button>
+    </div>
+
+    <div id="res" class="result" style="display:none">
+      <div class="line mono" id="l1">—</div>
+      <div class="line mono" id="l2">—</div>
+      <div class="line mono" id="l3">—</div>
+    </div>
+
+    <div class="foot">提示：按 <b>Enter/回车</b> 也可触发计算</div>
   </div>
+</div>
 
-  <script>
-    let nxpcPriceUSD = 0;
-    let usdToCny = 7.2; // 默认汇率，可手动改
+<div id="toast" class="toast">已复制</div>
 
-    // 获取 NXPC 币价
-    async function fetchPrice() {
-      try {
-        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=nxpc&vs_currencies=usd");
-        const data = await res.json();
-        if (data.nxpc && data.nxpc.usd) {
-          nxpcPriceUSD = data.nxpc.usd;
-          document.getElementById("priceInfo").innerText = `1 NXPC = ${nxpcPriceUSD} 美元`;
-        } else {
-          document.getElementById("priceInfo").innerText = "获取失败，可能 API 不支持 NXPC";
-          nxpcPriceUSD = 0;
-        }
-      } catch (e) {
-        document.getElementById("priceInfo").innerText = "获取币价失败";
-        nxpcPriceUSD = 0;
-      }
-    }
+<script>
+  // --------- 工具函数 ---------
+  const $   = s => document.querySelector(s);
+  const fmt = n => n.toLocaleString('zh-CN');
+  const cut = (n, d=4) => Number.isFinite(n) ? n.toFixed(d) : '—';
+  const show = (el, on=true)=> el.style.display = on ? '' : 'none';
 
-    function calculate() {
-      const neso = parseFloat(document.getElementById("nesoInput").value);
-      if (isNaN(neso) || neso <= 0) {
-        alert("请输入正确的 Neso 数量");
-        return;
-      }
+  // --------- 元素 ---------
+  const elNeso  = $('#neso');
+  const elRate  = $('#rate');
+  const elRatio = $('#ratio');
+  const elLive  = $('#live');
+  const eNeso   = $('#eNeso');
+  const eRate   = $('#eRate');
+  const btnCalc = $('#btnCalc');
+  const btnClear= $('#btnClear');
+  const btnCopy = $('#btnCopy');
+  const boxRes  = $('#res');
+  const l1 = $('#l1'), l2 = $('#l2'), l3 = $('#l3');
+  const toast = $('#toast');
 
-      const nxpc = neso / 100000;
-      if (nxpcPriceUSD > 0) {
-        const rmb = nxpc * nxpcPriceUSD * usdToCny;
-        document.getElementById("result").innerText =
-          `${neso.toLocaleString()} Neso = ${nxpc.toFixed(4)} NXPC ≈ ${rmb.toFixed(2)} 人民币`;
-      } else {
-        document.getElementById("result").innerText =
-          `${neso.toLocaleString()} Neso = ${nxpc.toFixed(4)} NXPC (币价未获取)`;
-      }
-    }
+  // --------- 初始化（从本地恢复设置） ---------
+  (function init(){
+    const savedRate  = localStorage.getItem('nxpc_rate');
+    const savedRatio = localStorage.getItem('nxpc_ratio');
+    const savedLive  = localStorage.getItem('nxpc_live');
 
-    function useManualRate() {
-      const rate = parseFloat(document.getElementById("manualRate").value);
-      if (!isNaN(rate) && rate > 0) {
-        usdToCny = rate;
-        alert(`已使用手动汇率：1 美元 = ${usdToCny} 人民币`);
-      } else {
-        alert("请输入正确的汇率数值");
-      }
-    }
+    if (savedRate)  elRate.value  = savedRate;
+    if (savedRatio && Number(savedRatio) > 0) elRatio.value = savedRatio;
+    elLive.checked = savedLive === '1';
 
-    fetchPrice();
-  </script>
+    // 回车计算
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') { e.preventDefault(); calculate(); }
+    });
+
+    // 实时计算
+    elNeso.addEventListener('input', maybeLive);
+    elRate.addEventListener('input', ()=>{ localStorage.setItem('nxpc_rate', elRate.value || ''); maybeLive(); });
+    elRatio.addEventListener('input', ()=>{ localStorage.setItem('nxpc_ratio', elRatio.value || ''); maybeLive(); });
+    elLive.addEventListener('change', ()=> localStorage.setItem('nxpc_live', elLive.checked ? '1' : '0'));
+
+    btnCalc.addEventListener('click', calculate);
+    btnClear.addEventListener('click', clearAll);
+    btnCopy.addEventListener('click', copyRes);
+  })();
+
+  function maybeLive(){ if(elLive.checked) calculate(false); }
+
+  // --------- 计算核心 ---------
+  function calculate(showErrors = true){
+    const neso  = Number(elNeso.value);
+    const rate  = Number(elRate.value);
+    const ratio = Number(elRatio.value) > 0 ? Number(elRatio.value) : 100000; // 默认固定比例
+
+    // 校验
+    let ok = true;
+    if (!(neso > 0)){ ok=false; if(showErrors){ eNeso.style.display='block'; } }
+    else eNeso.style.display='none';
+
+    if (!(rate > 0)){ ok=false; if(showErrors){ eRate.style.display='block'; } }
+    else eRate.style.display='none';
+
+    if (!ok) { show(boxRes, false); return; }
+
+    // 计算
+    const nxpc = neso / ratio;
+    const rmb  = nxpc * rate;
+
+    // 渲染
+    l1.innerHTML = `🔹 <b>${fmt(neso)}</b> NESO`;
+    l2.innerHTML = `= <span class="nxpc">${cut(nxpc, 6)} NXPC</span>`;
+    l3.innerHTML = `≈ <span class="rmb">${cut(rmb, 2)} RMB</span>  <span class="help">(按手动汇率：1 NXPC = ${cut(rate,4)} RMB)</span>`;
+    show(boxRes, true);
+  }
+
+  // --------- 清除与复制 ---------
+  function clearAll(){
+    elNeso.value = '';
+    // 保留上次汇率，方便复用；比例也保留
+    eNeso.style.display='none';
+    eRate.style.display='none';
+    show(boxRes, false);
+  }
+
+  function copyRes(){
+    const txt = boxRes.style.display==='none'
+      ? '暂无可复制的结果'
+      : `${l1.innerText}\n${l2.innerText}\n${l3.innerText}`;
+    navigator.clipboard.writeText(txt).then(()=> showToast('结果已复制'))
+      .catch(()=> showToast('复制失败，请手动选择文本复制'));
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 1400);
+  }
+</script>
 </body>
 </html>
