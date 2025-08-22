@@ -1,11 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
-  <meta charset="utf-8">
-  <title>我的第一个网页</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NESO 汇率小工具</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { font-size: 20px; }
+    .card { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    label { display: block; margin: 8px 0 4px; }
+    input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+    button { margin-top: 10px; padding: 8px 15px; border: none; background: #007bff; color: #fff; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    #history { height: 200px; overflow-y: auto; border: 1px solid #ddd; background: #fafafa; padding: 10px; font-size: 14px; }
+  </style>
 </head>
 <body>
-  <h1>你好，这是我的 GitHub Pages！</h1>
-  <p>如果你看到这句话，说明成功啦 🎉</p>
+  <h1>NESO ↔ NXPC ↔ 人民币 小工具</h1>
+  <div class="card">
+    <label for="neso">输入 NESO 数量：</label>
+    <input type="number" id="neso" placeholder="输入 neso 数量">
+    <button onclick="calculate()">计算</button>
+    <p id="result">结果会显示在这里</p>
+  </div>
+
+  <div class="card">
+    <h2>汇率信息</h2>
+    <p>最新 NXPC 价格（USDT）：<span id="nxpcPrice">加载中...</span></p>
+    <p>USDT → CNY 汇率：<span id="usdtCny">加载中...</span></p>
+  </div>
+
+  <div class="card">
+    <h2>历史记录</h2>
+    <div id="history"></div>
+  </div>
+
+<script>
+  // 模拟接口（这里你可以换成真实的API）
+  async function fetchPrices() {
+    // 假数据：1 NXPC = 0.02 USDT
+    let nxpcPrice = 0.02;
+    let usdtCny = 7.2;
+
+    // 更新显示
+    document.getElementById("nxpcPrice").textContent = nxpcPrice;
+    document.getElementById("usdtCny").textContent = usdtCny;
+
+    return { nxpcPrice, usdtCny };
+  }
+
+  async function calculate() {
+    const neso = parseFloat(document.getElementById("neso").value);
+    if (isNaN(neso) || neso <= 0) {
+      alert("请输入有效的 NESO 数量！");
+      return;
+    }
+
+    const { nxpcPrice, usdtCny } = await fetchPrices();
+
+    // 假设：1 NESO = 1 NXPC
+    const nxpc = neso;
+    const cny = nxpc * nxpcPrice * usdtCny;
+
+    const result = `≈ ${nxpc} NXPC ≈ ${cny.toFixed(2)} 元人民币`;
+    document.getElementById("result").textContent = result;
+
+    // 保存历史
+    let history = document.getElementById("history");
+    let now = new Date().toLocaleString();
+    history.innerHTML = `<div>[${now}] ${result}</div>` + history.innerHTML;
+  }
+
+  // 定时刷新（5分钟）
+  setInterval(fetchPrices, 300000);
+
+  // 初始化
+  fetchPrices();
+</script>
 </body>
 </html>
