@@ -3,108 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NESO → NXPC → 人民币 计算器</title>
+  <title>NESO → 人民币 计算器</title>
   <style>
     body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: #f5f7fa;
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
       margin: 0;
-      padding: 20px;
     }
     .container {
-      max-width: 400px;
-      margin: auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
     }
     h2 {
-      text-align: center;
-      color: #333;
       margin-bottom: 20px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-bottom: 6px;
-      color: #444;
+      font-size: 20px;
       font-weight: bold;
     }
     input {
       width: 100%;
       padding: 10px;
-      margin-bottom: 15px;
+      margin: 8px 0;
       border: 1px solid #ccc;
-      border-radius: 10px;
+      border-radius: 8px;
       font-size: 16px;
     }
     button {
-      width: 48%;
+      width: 100%;
       padding: 12px;
-      font-size: 16px;
+      margin-top: 12px;
+      background: #007bff;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
       cursor: pointer;
+      transition: background 0.3s;
     }
-    .calc-btn {
-      background: #4CAF50;
-      color: white;
-    }
-    .copy-btn {
-      background: #2196F3;
-      color: white;
-      float: right;
+    button:hover {
+      background: #0056b3;
     }
     .result {
-      font-size: 18px;
-      margin-top: 10px;
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f1faff;
+      font-size: 16px;
+      line-height: 1.6;
     }
     .highlight {
-      font-size: 22px;
       font-weight: bold;
-      color: #e91e63;
-    }
-    details {
-      margin-top: 15px;
-    }
-    details summary {
-      cursor: pointer;
-      font-weight: bold;
-      color: #555;
-    }
-    .history-item {
-      font-size: 14px;
-      margin-top: 5px;
-      border-bottom: 1px dashed #ccc;
-      padding-bottom: 4px;
+      color: #007bff;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>NESO → NXPC → 人民币 计算器</h2>
-
-    <div class="card">
-      <label for="neso">输入 NESO 数量:</label>
-      <input type="number" id="neso" placeholder="例如：1000000">
-
-      <label for="rate">输入汇率 (1 NXPC = ? 人民币):</label>
-      <input type="number" id="rate" step="0.0001" placeholder="例如：2.35">
-
-      <button class="calc-btn" onclick="calculate()">计算</button>
-      <button class="copy-btn" onclick="copyResult()">复制结果</button>
-
-      <div class="result" id="nxpcResult"></div>
-      <div class="result highlight" id="cnyResult"></div>
-    </div>
-
-    <details>
-      <summary>历史记录</summary>
-      <div id="history"></div>
-    </details>
+    <h2>NESO → 人民币 计算器</h2>
+    <input type="number" id="neso" placeholder="输入 NESO 数量">
+    <input type="number" id="rate" placeholder="输入 1 NXPC = ? 人民币">
+    <button onclick="calculate()">计算</button>
+    <div class="result" id="result">结果会显示在这里</div>
   </div>
 
   <script>
@@ -113,32 +81,18 @@
       const rate = parseFloat(document.getElementById('rate').value);
 
       if (isNaN(neso) || isNaN(rate)) {
-        alert("请输入有效的 NESO 数量和汇率");
+        document.getElementById('result').innerHTML = "⚠️ 请输入有效的 NESO 数量和汇率";
         return;
       }
 
       const nxpc = neso / 100000; // 固定 10万 NESO = 1 NXPC
-      const cny = nxpc * rate;
+      const rmb = nxpc * rate;
 
-      document.getElementById('nxpcResult').innerText = "NXPC 数量: " + nxpc.toFixed(4);
-      document.getElementById('cnyResult').innerText = "折合人民币: " + cny.toFixed(2) + " 元";
-
-      // 保存历史记录
-      const historyDiv = document.getElementById("history");
-      const item = document.createElement("div");
-      item.className = "history-item";
-      item.innerText = `${neso} NESO = ${nxpc.toFixed(4)} NXPC ≈ ${cny.toFixed(2)} 元`;
-      historyDiv.prepend(item);
-    }
-
-    function copyResult() {
-      const nxpcText = document.getElementById('nxpcResult').innerText;
-      const cnyText = document.getElementById('cnyResult').innerText;
-      const fullText = nxpcText + "\n" + cnyText;
-
-      navigator.clipboard.writeText(fullText).then(() => {
-        alert("结果已复制！");
-      });
+      document.getElementById('result').innerHTML = `
+        🌐 <span class="highlight">${neso}</span> NESO  
+        = <span class="highlight">${nxpc.toFixed(4)}</span> NXPC  
+        ≈ <span class="highlight">${rmb.toFixed(2)}</span> 人民币
+      `;
     }
   </script>
 </body>
